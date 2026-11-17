@@ -143,7 +143,9 @@ void usage(char *programName)
     printf("\tSecurely unwrap a batch with a Managed HSM key (one attestation, one secureunwrapkey call per key):\n");
     printf("\t\t%s -a <attestation-endpoint> -n <optional-nonce> -k KEYURL -c (imds|sp) -S <json-file|-|inline> [-A algorithm] [-j concurrency] [-R retries]\n", programName);
     printf("\t\t-j <n>  Max parallel secureunwrapkey calls (default: 2; 1 = sequential; 0 = one per key; capped at 64)\n");
-    printf("\t\t-R <n>  Max retries on HTTP 429/5xx and transport errors (default: 3)\n");
+    printf("\t\t-R <n>  Max retries on HTTP 429/500/502/503/504 and transport errors (default: 3)\n");
+    printf("\t\tInput is the batch JSON below; a key may add \"sha256\": \"<hex>\" to check the unwrapped bytes.\n");
+    printf("\t\tOutput \"unwrapped\" is base64url. A failed key gets \"error\" instead, and the exit code is 7.\n");
     printf("\n");
     printf("\tBatch unwrap from JSON file (one SKR, many unwraps):\n");
     printf("\t\t%s -a <attestation-endpoint> -n <optional-nonce> -k KEYURL -c (imds|sp) -B <json-file|-|inline> [-H oaep_hash] [-G mgf1_hash]\n", programName);

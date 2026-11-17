@@ -348,8 +348,9 @@ batch (for example every disk of a CVM) in one invocation:
 
 1. One MAA attestation and one access token for the whole batch.
 2. One `secureunwrapkey` call per key, spread across a small worker pool.
-   Each worker keeps its HTTPS connection alive between calls. HTTP 429 and
-   5xx responses are retried with exponential backoff.
+   Each worker keeps its HTTPS connection alive between calls. HTTP 429, 500,
+   502, 503 and 504 responses and transport errors are retried with
+   exponential backoff (see Retries below).
 3. Each result is decrypted with the VM's TPM-bound ephemeral key using the
    attestation library's `Decrypt()`, one key at a time.
 
@@ -370,7 +371,7 @@ A failure for one key is reported in its entry and does not stop the others. If 
 | Flag | Meaning |
 |---|---|
 | `-j <n>` | Max parallel `secureunwrapkey` calls (default 2; `1` = sequential; `0` = one per key; capped at 64) |
-| `-R <n>` | Max retries on HTTP 429/5xx and transport errors (default 3) |
+| `-R <n>` | Max retries on HTTP 429/500/502/503/504 and transport errors (default 3) |
 
 Each `secureunwrapkey` request has a 10 s connect timeout and a 30 s request timeout
 (curl `CURLOPT_CONNECTTIMEOUT`/`CURLOPT_TIMEOUT` on Linux; on Windows, WinHTTP name resolution and

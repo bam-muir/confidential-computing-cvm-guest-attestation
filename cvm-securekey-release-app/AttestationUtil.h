@@ -94,7 +94,7 @@ inline static void Check_HResult(std::string fileName, std::string funcName, int
 struct SecureUnwrapBatchOptions
 {
     unsigned concurrency = 2; // max parallel secureunwrapkey calls; 1 = sequential, 0 = one per key
-    unsigned max_retries = 3; // retries on 429/5xx with exponential backoff
+    unsigned max_retries = 3; // retries on HTTP 429/500/502/503/504 and transport errors, with backoff
 };
 
 #define TRACE_OUT Util::trace_out
