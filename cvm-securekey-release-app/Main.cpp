@@ -25,6 +25,11 @@
 #include "AttestationUtil.h"
 #include "Constants.h"
 
+#ifdef _WIN32
+#include <fcntl.h> // _O_BINARY
+#include <io.h>    // _setmode, _fileno
+#endif
+
 #ifdef PLATFORM_UNIX
 #include <unistd.h> // getopt, optarg, optind, symlink
 #include <sys/stat.h>
@@ -365,6 +370,11 @@ int main(int argc, char *argv[])
             std::vector<BYTE> unwrapped = Util::SecureUnwrapKey(
                 attestation_url, nonce, sym_key, key_enc_key_url,
                 secure_unwrap_algorithm, akv_credential_source);
+#ifdef _WIN32
+            // Raw key bytes: stop the text-mode stdout from turning 0x0A into 0x0D 0x0A.
+            std::cout.flush();
+            _setmode(_fileno(stdout), _O_BINARY);
+#endif
             std::cout.write(reinterpret_cast<const char *>(unwrapped.data()),
                             static_cast<std::streamsize>(unwrapped.size()));
             std::cout.flush();
