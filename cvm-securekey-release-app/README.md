@@ -363,9 +363,12 @@ The library's per-call `Decrypt()` creates a new ephemeral key
 (`TPM2_CreatePrimary`, ~180 ms on a vTPM) and policy session every time
 (~205 ms per key). With `DecryptBatch()` a key costs ~24 ms of TPM time.
 The app detects these APIs at compile time
-(`ATTESTATION_CLIENT_HAS_DECRYPT_BATCH`). With a library that does not have
-them yet, or with `-K`, each key is decrypted with `Decrypt()`. To build
-against the library from this repo's source, use `Dockerfile.attestlib-src`:
+(`ATTESTATION_CLIENT_HAS_DECRYPT_BATCH`) and, before using them, checks that
+the library loaded at run time exports `AttestationClientHasDecryptBatch`, so
+an older `libazguestattestation.so.1` or `AttestationClientLib.dll` is safe.
+With a library that does not have them, or with `-K`, each key is decrypted
+with `Decrypt()`. To build against the library from this repo's source, use
+`Dockerfile.attestlib-src`:
 
 ```sh
 docker build -f cvm-securekey-release-app/Dockerfile.attestlib-src --output out .

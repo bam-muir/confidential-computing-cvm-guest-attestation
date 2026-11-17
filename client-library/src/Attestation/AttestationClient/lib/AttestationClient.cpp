@@ -51,3 +51,7 @@ void Uninitialize() {
     attestation_client = nullptr;
     return;
 }
+
+bool AttestationClientHasDecryptBatch() {
+    return true;
+}

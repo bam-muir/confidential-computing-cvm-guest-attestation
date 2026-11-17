@@ -45,6 +45,7 @@
 #ifdef _WIN32
 #include <winhttp.h>
 #else
+#include <dlfcn.h> // dlsym
 #include <signal.h>
 #include <sys/stat.h>
 #endif
@@ -1854,7 +1855,32 @@ size_t ResolveWorkerCount(unsigned concurrency, size_t key_count)
 bool UseTpmKeyReuse(const SecureUnwrapBatchOptions &options)
 {
 #ifdef ATTESTATION_CLIENT_HAS_DECRYPT_BATCH
-    return options.reuse_tpm_key;
+    if (!options.reuse_tpm_key)
+    {
+        return false;
+    }
+    // The header has the new APIs, but the library loaded at run time may be
+    // an older build with the same file name whose vtable lacks them. Only
+    // builds that have them export AttestationClientHasDecryptBatch().
+    using HasDecryptBatchFn = bool (*)();
+    HasDecryptBatchFn has_decrypt_batch = nullptr;
+#ifdef _WIN32
+    HMODULE module = GetModuleHandleW(L"AttestationClientLib.dll");
+    if (module != nullptr)
+    {
+        has_decrypt_batch = reinterpret_cast<HasDecryptBatchFn>(
+            GetProcAddress(module, "AttestationClientHasDecryptBatch"));
+    }
+#else
+    has_decrypt_batch = reinterpret_cast<HasDecryptBatchFn>(
+        dlsym(RTLD_DEFAULT, "AttestationClientHasDecryptBatch"));
+#endif
+    if (has_decrypt_batch == nullptr || !has_decrypt_batch())
+    {
+        TRACE_OUT("Attestation library has no DecryptBatch(); using per-key Decrypt()");
+        return false;
+    }
+    return true;
 #else
     (void)options;
     return false; // Attestation library without DecryptBatch(): per-key Decrypt().
@@ -2317,7 +2343,10 @@ std::string Util::SecureUnwrapKeyBatch(
     //    can keep the certified TPM ephemeral key loaded for the whole batch.
     AttestationClientSession attestation_session;
 #ifdef ATTESTATION_CLIENT_HAS_DECRYPT_BATCH
-    attestation_session.get()->SetEphemeralKeyReuse(use_batch_api);
+    if (use_batch_api)
+    {
+        attestation_session.get()->SetEphemeralKeyReuse(true);
+    }
 #endif
     const std::string attestation_token = AttestWithClient(attestation_session.get(), attestation_url, nonce);
     if (attestation_token.empty())

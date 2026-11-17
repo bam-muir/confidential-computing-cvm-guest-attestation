@@ -102,7 +102,10 @@ public:
 
     // New APIs are appended after Free() so the vtable layout of earlier
     // releases is unchanged. Callers can detect them at compile time with
-    // ATTESTATION_CLIENT_HAS_DECRYPT_BATCH.
+    // ATTESTATION_CLIENT_HAS_DECRYPT_BATCH. An older library with the same
+    // file name does not have these slots, so before calling them also check
+    // at run time that the loaded library exports
+    // AttestationClientHasDecryptBatch (dlsym / GetProcAddress).
 
     /**
      * @brief Keep the TPM ephemeral key created by Attest() loaded in this client so that
@@ -164,4 +167,13 @@ extern "C" {
      */
     DllExports
     void Uninitialize();
+
+    /**
+     * @brief Run-time marker for SetEphemeralKeyReuse() and DecryptBatch().
+     * Only library builds that have those methods export this function, so
+     * look it up with dlsym / GetProcAddress rather than linking to it.
+     * @return true.
+     */
+    DllExports
+    bool AttestationClientHasDecryptBatch();
 }

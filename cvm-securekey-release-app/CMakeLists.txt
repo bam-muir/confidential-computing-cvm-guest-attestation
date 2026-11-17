@@ -124,6 +124,9 @@ if(UNIX)
         )
     endif()
 
+    # dlsym() for the run-time DecryptBatch() check (libdl before glibc 2.34).
+    target_link_libraries(${CMAKE_PROJECT_TARGET} ${CMAKE_DL_LIBS})
+
     if(AZURE_LOCAL)
         target_link_libraries(${CMAKE_PROJECT_TARGET} edge-cc-base-attestation-sdk)
     endif()
