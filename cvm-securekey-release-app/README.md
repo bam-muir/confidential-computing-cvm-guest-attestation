@@ -329,7 +329,8 @@ sudo ./AzureAttestSKR \
   -A A256KWPAD
 ```
 
-`-A` defaults to `A256KWPAD`. The command writes the exact unwrapped bytes to
+`-A` defaults to `RSA-OAEP-256` (RSA-HSM key); use `-A A256KWPAD` with an `oct-HSM`
+key, as above. The command writes the exact unwrapped bytes to
 stdout without adding a newline, so it can be piped directly to a consumer:
 
 ```sh
@@ -356,7 +357,7 @@ Like `-U`, this works with Managed HSM keys only and uses API version
 `2026-07-01-preview`.
 
 ```sh
-sudo ./AzureAttestSKR -a <maa-url> -k <managed-hsm-key-url> -c imds -A A256KWPAD \
+sudo ./AzureAttestSKR -a <maa-url> -k <managed-hsm-key-url> -c imds -A RSA-OAEP-256 \
   -S batch.json
 ```
 

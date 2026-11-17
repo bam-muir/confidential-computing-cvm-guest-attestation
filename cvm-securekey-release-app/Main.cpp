@@ -133,7 +133,7 @@ void usage(char *programName)
     printf("\n");
     printf("\tSecurely unwrap with a non-exportable Managed HSM key into this attested VM:\n");
     printf("\t\t%s -a <attestation-endpoint> -n <optional-nonce> -k KEYURL -c (imds|sp) -s base64url(wrappedKey) -U [-A algorithm]\n", programName);
-    printf("\t\t-A <algorithm>  Secure unwrap algorithm (default: A256KWPAD)\n");
+    printf("\t\t-A <algorithm>  Secure unwrap algorithm (default: RSA-OAEP-256; A256KWPAD for oct-HSM keys)\n");
     printf("\n");
     printf("\tSecurely unwrap a batch with a Managed HSM key (one attestation, one secureunwrapkey call per key):\n");
     printf("\t\t%s -a <attestation-endpoint> -n <optional-nonce> -k KEYURL -c (imds|sp) -S <json-file|-|inline> [-A algorithm] [-j concurrency] [-R retries]\n", programName);
@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
     std::string key_enc_key_url;
     std::string oaep_hash = "sha256"; // default OAEP hash
     std::string mgf1_hash;            // empty = same as oaep_hash
-    std::string secure_unwrap_algorithm = "A256KWPAD";
+    std::string secure_unwrap_algorithm = "RSA-OAEP-256";
     std::string batch_input;           // -B/-S: JSON file path, "-" for stdin, or inline JSON
     SecureUnwrapBatchOptions secure_batch_options;
     Operation op = Operation::None;
