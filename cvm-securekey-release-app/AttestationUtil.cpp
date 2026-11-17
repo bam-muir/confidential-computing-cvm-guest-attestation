@@ -43,6 +43,7 @@
 #ifdef _WIN32
 #include <winhttp.h>
 #else
+#include <signal.h>
 #include <sys/stat.h>
 #endif
 
@@ -907,6 +908,8 @@ struct CurlSlistFree
 /// Returns the HTTP status code. If retry_after_seconds is set, it receives
 /// the Retry-After delay in seconds, or -1 if the response has none.
 /// Non-zero timeouts cap the connect phase and the whole request.
+/// Set no_signal when calling from worker threads; the caller must then
+/// ignore SIGPIPE itself (see SecureUnwrapKeyBatch).
 /// Transport failures (including timeouts) throw EXIT_NETWORK_FAIL.
 /// </summary>
 static long KeyVaultPostCurl(CURL *curl,
@@ -916,7 +919,8 @@ static long KeyVaultPostCurl(CURL *curl,
                              std::string &responseStr,
                              long *retry_after_seconds = nullptr,
                              long connect_timeout_ms = 0,
-                             long request_timeout_ms = 0)
+                             long request_timeout_ms = 0,
+                             bool no_signal = false)
 {
     TRACE_OUT("Entering KeyVaultPostCurl()");
     responseStr.clear();
@@ -939,8 +943,12 @@ static long KeyVaultPostCurl(CURL *curl,
         TRACE_ERROR_EXIT("curl_easy_setopt() failed for HTTP_VERSION")
     }
 
-    // Required for safe use of curl from multiple threads.
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    // Required for safe use of curl from multiple threads. It also stops curl
+    // from ignoring SIGPIPE during the transfer, so only the -S workers set it.
+    if (no_signal)
+    {
+        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    }
 
     // 0 keeps curl's defaults (no total timeout); the -S batch path sets both.
     if (connect_timeout_ms > 0)
@@ -1864,7 +1872,8 @@ public:
             }
         }
         return KeyVaultPostCurl(curl_.get(), uri, access_token, body, response, &retry_after_seconds,
-                                SecureUnwrapConnectTimeoutMs, SecureUnwrapRequestTimeoutMs);
+                                SecureUnwrapConnectTimeoutMs, SecureUnwrapRequestTimeoutMs,
+                                /*no_signal=*/true);
 #endif
     }
 
@@ -2137,6 +2146,17 @@ std::string Util::SecureUnwrapKeyBatch(
     const auto keys = ParseSecureUnwrapBatchInput(batch_json);
 
 #ifndef _WIN32
+    // The workers set CURLOPT_NOSIGNAL, so curl no longer ignores SIGPIPE; a
+    // peer reset during a TLS write would otherwise kill the process before
+    // the retry logic sees the error.
+    struct sigaction sigpipe_action {};
+    sigpipe_action.sa_handler = SIG_IGN;
+    if (sigemptyset(&sigpipe_action.sa_mask) != 0 ||
+        sigaction(SIGPIPE, &sigpipe_action, nullptr) != 0)
+    {
+        throw skr_error(EXIT_NETWORK_FAIL, "Failed to ignore SIGPIPE for secure unwrap batch");
+    }
+
     static std::once_flag curl_init_flag;
     std::call_once(curl_init_flag, []() { curl_global_init(CURL_GLOBAL_DEFAULT); });
 #endif

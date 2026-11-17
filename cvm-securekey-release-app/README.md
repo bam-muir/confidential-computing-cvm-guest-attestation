@@ -384,6 +384,10 @@ Each wait is exponential backoff from 250 ms with 50–100 % jitter, at least th
 about 60 s plus one request timeout. Other HTTP errors (400, 401, 403, 404, ...) are not retried.
 A key that still fails is reported in its entry, and the process exits 7.
 
+On Linux, `-S` ignores `SIGPIPE` before starting network work, so a connection
+reset is handled as a transport error instead of terminating the process before
+it can retry. The other modes keep their existing signal handling.
+
 ## Debugging
 
 To enable debug trace output, set the `SKR_TRACE_ON` environment variable at runtime. Use `-E` with `sudo` to preserve the environment variable (if using Service Principle environment vars).
